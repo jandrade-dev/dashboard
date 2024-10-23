@@ -3,8 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Papa from "papaparse";
-// import { Data, BarData } from "plotly.js"; // Importação dos tipos Data e BarData
-import Plotly, { Data, Layout, Config } from 'plotly.js';
+import { Data } from 'plotly.js';
 
 // Componente Skeleton para o Gráfico
 const PlotSkeleton: React.FC = () => (
@@ -67,7 +66,7 @@ const parseNumber = (value: any): number | null => {
   if (typeof value === "number") return value;
   if (typeof value === "string") {
     if (value.trim() === "") return null;
-    let normalized = value.replace("%", "").replace(",", ".").trim();
+    const normalized = value.replace("%", "").replace(",", ".").trim();
     let parsed = parseFloat(normalized);
     if (isNaN(parsed)) return null;
     if (parsed <= 1) {
@@ -172,7 +171,7 @@ const Dashboard: React.FC = () => {
       const agents = Array.from(new Set(tickets.map((ticket) => ticket["Agent Name"])));
       setSelectedAgent(agents[0]);
     }
-  }, [tickets]);
+  }, [tickets, selectedAgent]);
 
   const groupTickets = (tickets: Ticket[]) => {
     return tickets.reduce((acc, ticket) => {

@@ -63,7 +63,7 @@ const parseNumber = (value: any): number | null => {
   if (typeof value === "number") return value;
   if (typeof value === "string") {
     if (value.trim() === "") return null;
-    let normalized = value.replace("%", "").replace(",", ".").trim();
+    const normalized = value.replace("%", "").replace(",", ".").trim();
     let parsed = parseFloat(normalized);
     if (isNaN(parsed)) return null;
     if (parsed <= 1) {

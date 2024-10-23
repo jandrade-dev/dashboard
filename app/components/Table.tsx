@@ -122,7 +122,7 @@ const Table: React.FC = () => {
       const agents = Array.from(new Set(tickets.map((t) => t["Agent Name"])));
       setSelectedAgent(agents[0]);
     }
-  }, [tickets]);
+  }, [tickets, selectedAgent]);
 
   const handleSort = (key: keyof TableDataRow) => {
     let direction: "asc" | "desc" = "asc";
