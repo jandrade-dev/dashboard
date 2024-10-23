@@ -1,11 +1,11 @@
 // app/page.tsx
 
-import Dashboard from './components/Dashboard';
+import Table from '../components/Table';
 
 export default function DashboardPage() {
   return (
     <div>
-      <Dashboard />
+      <Table />
     </div>
   );
 }
