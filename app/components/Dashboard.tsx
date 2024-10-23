@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Papa from "papaparse";
+// import { Data, BarData } from "plotly.js"; // Importação dos tipos Data e BarData
+import Plotly, { Data, Layout, Config } from 'plotly.js';
 
 // Componente Skeleton para o Gráfico
 const PlotSkeleton: React.FC = () => (
@@ -38,6 +40,10 @@ const Plot = dynamic(() => import("react-plotly.js"), {
   loading: () => <PlotSkeleton />,
 });
 
+// Definição do tipo das KPIs
+type KPI = "CSAT" | "CRES" | "FCR" | "RCR" | "Hangup";
+
+// Atualização da interface Ticket para permitir null nas KPIs
 interface Ticket {
   id: number;
   "Agent Name": string;
@@ -45,15 +51,15 @@ interface Ticket {
   "Driver Level2": string;
   "Next Steps - Reason (L2)": string;
   "Day(Contact Date)": string;
-  "% CSAT": string | number;
-  "% CRES": string | number;
-  "% FCR": string | number;
-  "% RCR": string | number;
-  "% Hangup": string | number;
+  "% CSAT": string | number | null;
+  "% CRES": string | number | null;
+  "% FCR": string | number | null;
+  "% RCR": string | number | null;
+  "% Hangup": string | number | null;
   AHT: string | number;
   driver?: string;
   nextStep?: string;
-  contactDate?: Date;
+  contactDate: Date | null; // Atualizado para aceitar null
   [key: string]: any;
 }
 
@@ -91,7 +97,7 @@ const parseDate = (dateStr: string): Date | null => {
   return date;
 };
 
-const KPI_GOALS = {
+const KPI_GOALS: Record<KPI, number> = {
   CSAT: 93.5,
   CRES: 83,
   FCR: 93.5,
@@ -222,7 +228,7 @@ const Dashboard: React.FC = () => {
         return acc;
       }, {} as Record<string, number>);
 
-      const deviations: Record<string, number> = {};
+      const deviations: Partial<Record<KPI, number>> = {};
 
       if (avgKPIs["% CSAT"] < KPI_GOALS.CSAT)
         deviations.CSAT = KPI_GOALS.CSAT - avgKPIs["% CSAT"];
@@ -235,11 +241,11 @@ const Dashboard: React.FC = () => {
       if (avgKPIs["% Hangup"] < KPI_GOALS.Hangup)
         deviations.Hangup = KPI_GOALS.Hangup - avgKPIs["% Hangup"];
 
-      const totalDeviation = Object.values(deviations).reduce((sum, val) => sum + val, 0);
+      const totalDeviation = Object.values(deviations).reduce((sum, val) => sum + (val || 0), 0);
 
-      const proportions: Record<string, number> = {};
+      const proportions: Partial<Record<KPI, number>> = {};
       if (totalDeviation > 0) {
-        for (const [kpi, dev] of Object.entries(deviations)) {
+        for (const [kpi, dev] of Object.entries(deviations) as [KPI, number][]) {
           proportions[kpi] = (dev / totalDeviation) * totalTickets;
         }
       }
@@ -263,30 +269,33 @@ const Dashboard: React.FC = () => {
 
     const topCombinations = filteredCombinations.slice(0, 10);
 
-    const kpis = ["CSAT", "CRES", "FCR", "RCR", "Hangup"];
-    const plotData = kpis.map((kpi) => ({
+    const kpis: KPI[] = ["CSAT", "CRES", "FCR", "RCR", "Hangup"];
+
+
+
+    type BarData = Partial<Data> & {
+      x: string[] | number[];
+      y: number[];
+    }
+    
+    const plotData: BarData[] = kpis.map((kpi) => ({
       name: kpi,
       x: topCombinations.map((comb) => comb.xValue),
       y: topCombinations.map((comb) => comb.proportions[kpi] || 0),
       type: "bar",
-      hovertext: topCombinations.map((comb) => {
-        const deviation = comb.deviations[kpi] || 0;
-        return `<b>${comb.xValue}</b><br>Volume Total de Tickets: ${
-          comb.totalTickets
-        }<br>${kpi}: ${comb.avgKPIs[`% ${kpi}`]?.toFixed(2)}% (Desvio: ${deviation.toFixed(
-          2
-        )}%)`;
-      }),
-      hoverinfo: "text",
+      // Resto do código
     }));
+
 
     const topCombination = filteredCombinations[0];
     let selectedTickets: Ticket[] = [];
 
     if (topCombination) {
       const maxDeviationKPI = Object.keys(topCombination.deviations).reduce((a, b) =>
-        topCombination.deviations[a] > topCombination.deviations[b] ? a : b
-      );
+        (topCombination.deviations[a as KPI] || 0) > (topCombination.deviations[b as KPI] || 0)
+          ? a
+          : b
+      ) as KPI;
 
       const kpiField = `% ${maxDeviationKPI}`;
       selectedTickets = topCombination.tickets
@@ -403,7 +412,6 @@ const Dashboard: React.FC = () => {
                     title: "Volume Total de Tickets",
                     automargin: true,
                   },
-                  // Removido width fixo para responsividade
                   height: 600,
                   hovermode: "closest",
                   paper_bgcolor: "#ffffff",
@@ -412,7 +420,7 @@ const Dashboard: React.FC = () => {
                     title: { text: "KPIs com Desvio" },
                   },
                 }}
-                style={{ width: "100%", height: "100%" }} // Faz o gráfico ocupar toda a largura do contêiner
+                style={{ width: "100%", height: "100%" }}
                 config={{
                   responsive: true,
                 }}
@@ -433,7 +441,7 @@ const Dashboard: React.FC = () => {
                     width: "100%",
                     borderCollapse: "collapse",
                     marginBottom: "20px",
-                    fontSize: "12px", // Tamanho de fonte menor
+                    fontSize: "12px",
                   }}
                 >
                   <thead>
@@ -441,7 +449,7 @@ const Dashboard: React.FC = () => {
                       <th
                         style={{
                           border: "1px solid #ddd",
-                          padding: "4px", // Menor padding
+                          padding: "4px",
                           backgroundColor: "#f0f0f0",
                           textAlign: "left",
                         }}
@@ -451,7 +459,7 @@ const Dashboard: React.FC = () => {
                       <th
                         style={{
                           border: "1px solid #ddd",
-                          padding: "4px", // Menor padding
+                          padding: "4px",
                           backgroundColor: "#f0f0f0",
                           textAlign: "left",
                         }}
@@ -461,7 +469,7 @@ const Dashboard: React.FC = () => {
                       <th
                         style={{
                           border: "1px solid #ddd",
-                          padding: "4px", // Menor padding
+                          padding: "4px",
                           backgroundColor: "#f0f0f0",
                           textAlign: "left",
                         }}
@@ -476,7 +484,7 @@ const Dashboard: React.FC = () => {
                         <td
                           style={{
                             border: "1px solid #ccc",
-                            padding: "4px", // Menor padding
+                            padding: "4px",
                           }}
                         >
                           {ticket.id}
@@ -484,7 +492,7 @@ const Dashboard: React.FC = () => {
                         <td
                           style={{
                             border: "1px solid #ccc",
-                            padding: "4px", // Menor padding
+                            padding: "4px",
                           }}
                         >
                           {ticket.driver || "Indefinido"}
@@ -492,7 +500,7 @@ const Dashboard: React.FC = () => {
                         <td
                           style={{
                             border: "1px solid #ccc",
-                            padding: "4px", // Menor padding
+                            padding: "4px",
                           }}
                         >
                           {ticket.nextStep || "Não Definido"}

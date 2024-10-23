@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Papa from "papaparse";
 
@@ -47,15 +47,15 @@ interface Ticket {
   "Driver Level2": string;
   "Next Steps - Reason (L2)": string;
   "Day(Contact Date)": string;
-  "% CSAT": string | number;
-  "% CRES": string | number;
-  "% FCR": string | number;
-  "% RCR": string | number;
-  "% Hangup": string | number;
+  "% CSAT": string | number | null;
+  "% CRES": string | number | null;
+  "% FCR": string | number | null;
+  "% RCR": string | number | null;
+  "% Hangup": string | number | null;
   AHT: string | number;
   driver?: string;
   nextStep?: string;
-  contactDate?: Date;
+  contactDate?: Date | null;
   [key: string]: any;
 }
 
@@ -242,7 +242,8 @@ const TrendComponent: React.FC = () => {
     });
 
     // Obter a meta para o indicador selecionado
-    const goal = KPI_GOALS[indicator.replace("% ", "")];
+    const indicatorKey = indicator.replace("% ", "") as keyof typeof KPI_GOALS;
+    const goal = KPI_GOALS[indicatorKey];
 
     return {
       x: dates,

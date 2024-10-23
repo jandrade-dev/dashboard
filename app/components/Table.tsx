@@ -16,6 +16,27 @@ interface Ticket {
   AHT: number | null;
 }
 
+interface TableDataRow {
+  driver: string;
+  nextStep: string;
+  volume: number;
+  CSAT: string;
+  CSAT_Deviation: number | null;
+  CSAT_Deviation_Str: string;
+  CRES: string;
+  CRES_Deviation: number | null;
+  CRES_Deviation_Str: string;
+  FCR: string;
+  FCR_Deviation: number | null;
+  FCR_Deviation_Str: string;
+  RCR: string;
+  RCR_Deviation: number | null;
+  RCR_Deviation_Str: string;
+  Hangup: string;
+  Hangup_Deviation: number | null;
+  Hangup_Deviation_Str: string;
+}
+
 const parseNumber = (value: any): number | null => {
   if (typeof value === "number") {
     if (isNaN(value)) return null;
@@ -54,7 +75,7 @@ const Table: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [sortConfig, setSortConfig] = useState<{
-    key: string;
+    key: keyof TableDataRow;
     direction: "asc" | "desc";
   } | null>(null);
   const [selectedDriverFilter, setSelectedDriverFilter] = useState<string>("All");
@@ -103,7 +124,7 @@ const Table: React.FC = () => {
     }
   }, [tickets]);
 
-  const handleSort = (key: string) => {
+  const handleSort = (key: keyof TableDataRow) => {
     let direction: "asc" | "desc" = "asc";
     if (
       sortConfig &&
@@ -115,7 +136,7 @@ const Table: React.FC = () => {
     setSortConfig({ key, direction });
   };
 
-  const tableData = React.useMemo(() => {
+  const tableData: TableDataRow[] = React.useMemo(() => {
     if (tickets.length === 0 || !selectedAgent) return [];
 
     let agentTickets = tickets.filter(
@@ -224,12 +245,18 @@ const Table: React.FC = () => {
 
   const sortedTableData = React.useMemo(() => {
     if (sortConfig !== null) {
-      return [...tableData].sort((a, b) => {
+      return [...tableData].sort((a: TableDataRow, b: TableDataRow) => {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
 
-        const aNum = parseFloat(aValue);
-        const bNum = parseFloat(bValue);
+        // Adicionando verificações para valores nulos ou indefinidos
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+
+        const aNum = parseFloat(aValue as string);
+        const bNum = parseFloat(bValue as string);
+
         if (!isNaN(aNum) && !isNaN(bNum)) {
           return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
         }
@@ -433,7 +460,7 @@ const Table: React.FC = () => {
                       <th
                         key={column.key}
                         style={tableHeaderStyle}
-                        onClick={() => handleSort(column.key)}
+                        onClick={() => handleSort(column.key as keyof TableDataRow)}
                       >
                         {column.label}{" "}
                         {sortConfig?.key === column.key
